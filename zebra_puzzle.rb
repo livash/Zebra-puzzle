@@ -3,7 +3,7 @@
 require_relative 'game'
 
 def solve_zebra_puzzle(file_name)
-  contnet = File.read(file_name)
+  content = File.read(file_name)
   game = Game.new(content)
   
   
