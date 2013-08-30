@@ -5,6 +5,7 @@ require_relative 'game'
 def solve_zebra_puzzle(file_name)
   content = File.read(file_name)
   game = Game.new(content)
+  puts game.clues.length
   solution = game.solve
 end
 

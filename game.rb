@@ -6,11 +6,15 @@ class Game
   PETS = %w{dos birds cats horse fish}
   CIGARETTES = ["Pall Malls", "Dunhill", "Blends", "Bluemasters", "Prince"]
   DRINKS = %w{coffee milk beer water}
-  VERBS = %w{lives smokes drinks is living keeps}
+  VERBS = %w{lives smokes drinks living keeps}
   PROPERTIES = %w{house owner person man}
-  LOOKUP = {"lives" => [:find_house, :find_nationality], "drinks" => [:find_drink]}
-  #CONSTANTS_ARRAY = [COLORS, NATIONALITIES, PETS, CIGARETTES, DRINKS, ]
-  
+  LOOKUP = {"lives" => [:find_house, :find_nationality], 
+    "drinks" => [:find_drink],
+    "smokes" => [:find_cigarettes, :find_nationality],
+    "keeps" => [:find_pets],
+    "living" => [:find_house]
+  }
+    
   attr_accessor :question, :clues 
   
   def initialize(str="")
@@ -56,14 +60,54 @@ class Game
   end
   
   def solve
-    
+    #here I will be merging clues
+    # each clue is a hash
+    # when the number of hashes reaches five
+    # I can look for the asnwer by asking a question
+    # clue.pet == "fish" or clue.pet == nil
   end
 end
 
 # functions declared outside the class
 # move them later into a module
-def find_drink(str)
+def find_pets(str)
+  result = {}
+  words = str.chomp(".").split(" ")
+  words.each_with_index do |word, idx|
+    if word == "keeps" and words[idx + 1] != "a"
+      result[:pet] = words[idx + 1]
+    elsif word == "keeps" and words[idx + 1] == "a"
+      result[:pet] = words[idx + 2]
+    end
+  end
   
+  result
+end
+
+def find_cigarettes(str)
+  result = {}
+  words = str.chomp(".").split(" ")
+  words.each_with_index do |word, idx|
+    if word == "smokes" and words[idx + 1] != "Pall"
+      result[:cigarettes] = words[idx + 1]
+    elsif word == "smokes" and words[idx + 1] == "Pall"
+      result[:cigarettes] = word + " Mall"
+    end
+  end
+  
+  result
+end
+
+def find_drink(str)
+  result = {}
+  words = str.chomp(".").split(" ")
+  words.each_with_index do |word, idx|
+    if word == "drinks"
+      result[:drinks] = words[idx + 1]
+    end
+  end
+  
+  result
 end
 
 def find_house(str)
@@ -85,6 +129,7 @@ end
 
 def find_nationality(str)
   result = {}
+  return result if (str.split(" ").include?("man") || str.split(" ").include?("who"))
   temp = str.split(" ")[1]
   if temp[0].capitalize == temp[0]
     result[:nationality] = temp
@@ -97,5 +142,11 @@ if $PROGRAM_NAME == __FILE__
   str = "The Brit lives in the red house."
   p Game.parse_clue(str)
   
+  str2 = "The man who smokes Blends has a neighbor who drinks water."
+  p Game.parse_clue(str2)
+  str3 = "The man who smokes Blends lives next to the one who keeps cats."
+  p Game.parse_clue(str3)
+  str4 = "The man living in the center house drinks milk."
+  p Game.parse_clue(str4)
   
 end
