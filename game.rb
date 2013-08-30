@@ -19,25 +19,29 @@ class Game
   attr_accessor :question, :clues 
   
   def initialize(str="")
-    data = Game.parse_data(str)
-    @question = data.first
-    @clues = data.last
+    @question = Game.parse_data_for_question(str)
+    @clues = Game.parse_data_for_clues(str)
   end
   
-  def self.parse_data(str)
-    res_question = ""
-    res_clues = []
+  def self.parse_data_for_clues(str)
+    result_clues = []
     lines = str.split("\n")
     lines.each_with_index do |line, idx|
-      if idx == 0
-        res_question = line.split(" ")[-2] 
-      else
-        # parse_clue returns {property: value}
-        res_clues << Game.parse_clue(line.chomp('.'))
-      end
+      next if idx == 0
+      # parse_clue returns {property: value}
+      result_clues << Game.parse_clue(line.chomp('.'))  
     end
     
-    [res_question, res_clues]
+    result_clues
+  end
+  
+  def self.parse_data_for_question(str)
+    property = str.split("\n").first.chomp("?").split(" ").last
+    return {:pet        => property} if PETS.include?(property)
+    return {:drinks     => property} if DRINKS.inlcude?(property)
+    return {:cigarettes => property} if CIGARETTES.include?(property)
+    
+    {}
   end
   
   def self.parse_clue(str)
@@ -53,6 +57,7 @@ class Game
     # ADDITIONAL CLUE PARSING NEEDS TO BE DONE
     # search through the nouns for a clue
     # to find additional properties to add to result
+    
     
     result
   end

@@ -6,6 +6,7 @@ def solve_zebra_puzzle(file_name)
   content = File.read(file_name)
   game = Game.new(content)
   puts game.clues
+  
   solution = game.solve
 end
 
