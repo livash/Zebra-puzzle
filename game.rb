@@ -6,12 +6,13 @@ class Game
   PETS = %w{dos birds cats horse fish}
   CIGARETTES = ["Pall Malls", "Dunhill", "Blends", "Bluemasters", "Prince"]
   DRINKS = %w{coffee milk beer water}
-  VERBS = %w{lives smokes drinks living keeps}
-  PROPERTIES = %w{house owner person man}
+  VERBS = %w{lives smokes drinks living keeps raises}
+  NOUNS = %w{house owner person man}
   LOOKUP = {"lives" => [:find_house, :find_nationality], 
-    "drinks" => [:find_drink],
+    "drinks" => [:find_drink, :find_nationality],
     "smokes" => [:find_cigarettes, :find_nationality],
-    "keeps" => [:find_pets],
+    "keeps" => [:find_pets, :find_nationality],
+    "raises" => [:find_pets, :find_nationality],
     "living" => [:find_house]
   }
     
@@ -45,9 +46,13 @@ class Game
     verbs = Game.find_verbs(str)
     verbs.each do |verb|
       LOOKUP[verb].each do |fun|
-       result = result.merge(send(fun, str))
+        result = result.merge(send(fun, str))
       end
     end
+    
+    # ADDITIONAL CLUE PARSING NEEDS TO BE DONE
+    # search through the nouns for a clue
+    # to find additional properties to add to result
     
     result
   end
@@ -65,7 +70,22 @@ class Game
     # when the number of hashes reaches five
     # I can look for the asnwer by asking a question
     # clue.pet == "fish" or clue.pet == nil
+    result = []
+    @clues.each do |clue|
+      temp_clues = @clues - [clue]
+      clue.each do |key, value|
+        temp_clues.each do |temp_clue|
+          # merge two clues
+          result << clue.merge(temp_clue) if temp_clue[key] == value
+        end
+      end
+    end
+    puts "RESULT >>>>>>>>>>"
+    puts result
+    
+    result
   end
+    
 end
 
 # functions declared outside the class
@@ -74,7 +94,7 @@ def find_pets(str)
   result = {}
   words = str.chomp(".").split(" ")
   words.each_with_index do |word, idx|
-    if word == "keeps" and words[idx + 1] != "a"
+    if (word == "keeps" || word == "raises") and words[idx + 1] != "a"
       result[:pet] = words[idx + 1]
     elsif word == "keeps" and words[idx + 1] == "a"
       result[:pet] = words[idx + 2]
@@ -91,7 +111,7 @@ def find_cigarettes(str)
     if word == "smokes" and words[idx + 1] != "Pall"
       result[:cigarettes] = words[idx + 1]
     elsif word == "smokes" and words[idx + 1] == "Pall"
-      result[:cigarettes] = word + " Mall"
+      result[:cigarettes] = "Pall Mall"
     end
   end
   
