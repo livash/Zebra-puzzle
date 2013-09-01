@@ -8,6 +8,7 @@ def solve_zebra_puzzle(file_name)
   puts game.clues
   
   solution = game.solve
+  p game.houses
 end
 
 if $PROGRAM_NAME == __FILE__

@@ -1,4 +1,5 @@
 require_relative "module"
+require_relative "house"
 
 class Game
   COLORS = %w{red blue white yellow green}
@@ -6,21 +7,32 @@ class Game
   PETS = %w{dos birds cats horse fish}
   CIGARETTES = ["Pall Malls", "Dunhill", "Blends", "Bluemasters", "Prince"]
   DRINKS = %w{coffee milk beer water}
-  VERBS = %w{lives smokes drinks living keeps raises}
-  NOUNS = %w{house owner person man}
-  LOOKUP = {"lives" => [:find_house, :find_nationality], 
-    "drinks" => [:find_drink, :find_nationality],
-    "smokes" => [:find_cigarettes, :find_nationality],
-    "keeps" => [:find_pets, :find_nationality],
+  VERBS = %w{lives smokes drinks living keeps raises is}
+  NOUNS = %w{owner person man neighbor} #house
+  CLUE_SPLITTING_WORDS = %w{next neighbor}
+  POSITION = %w{left right center first last next}
+  LOOKUP = {
+    "lives"  => [:find_house, :find_nationality], 
+    "drinks" => [:find_drink, :find_nationality, :find_house],
+    "smokes" => [:find_cigarettes, :find_nationality, :find_house],
+    "keeps"  => [:find_pets, :find_nationality],
     "raises" => [:find_pets, :find_nationality],
-    "living" => [:find_house]
+    "living" => [:find_house],
+    "is"     => [:complex_parse],
+    
+    "house"  => [:find_house],
+    "owner"  => [],
+    "person" => [],
+    "man"    => [],
+    "neighbor" => []
   }
     
-  attr_accessor :question, :clues 
+  attr_accessor :question, :clues, :houses 
   
   def initialize(str="")
     @question = Game.parse_data_for_question(str)
     @clues = Game.parse_data_for_clues(str)
+    @houses = []
   end
   
   def self.parse_data_for_clues(str)
@@ -46,23 +58,40 @@ class Game
   
   def self.parse_clue(str)
     result = {}
-    words = str.split(' ')
-    verbs = Game.find_verbs(str)
-    verbs.each do |verb|
-      LOOKUP[verb].each do |fun|
-        result = result.merge(send(fun, str))
+    subject = ""
+    object = ""
+    words = str.chomp(".").split(" ")
+    CLUE_SPLITTING_WORDS.each do |split_word|
+      if words.include?(split_word)
+        #process subject
+        subject = str.split(split_word).first
+        result = result.merge(Game.parse_clue(subject))
+        result[:position_to_neighbor] = split_word
+        result[:position_to_neighbor] = "next" if split_word == "neighbor"
+        #process object
+        object = str.split(split_word).last
+        temp_result = Game.parse_clue(object)
+        result = result.merge(reverse_role(temp_result))
       end
     end
     
-    # ADDITIONAL CLUE PARSING NEEDS TO BE DONE
-    # search through the nouns for a clue
-    # to find additional properties to add to result
-    
+    #1. Look through verbs in a clue
+    if subject == "" and object == ""
+      verbs = Game.find_verbs(str)
+      verbs.each do |verb|
+        LOOKUP[verb].each do |fun|
+          result = result.merge(send(fun, str))
+        end
+      end
+
+      if result[:house_color].nil?
+        result = result.merge(send(LOOKUP["house"].first, str))
+      end
+    end
     
     result
   end
-  
-  
+
   def self.find_verbs(str)
     str.split(' ').select do |word|
       VERBS.include?(word)
@@ -70,31 +99,81 @@ class Game
   end
   
   def solve
-    #here I will be merging clues
-    # each clue is a hash
-    # when the number of hashes reaches five
-    # I can look for the asnwer by asking a question
-    # clue.pet == "fish" or clue.pet == nil
-    result = []
+    # iterate through clues, find one with reference to house_color
     @clues.each do |clue|
-      temp_clues = @clues - [clue]
-      clue.each do |key, value|
-        temp_clues.each do |temp_clue|
-          # merge two clues
-          result << clue.merge(temp_clue) if temp_clue[key] == value
+      if clue[:house_color]
+        house = House.new()
+        house.color = clue[:house_color]
+        house.nationality = clue[:nationality]
+        house.pets = clue[:pets]
+        house.cigarettes = clue[:cigarettes]
+        house.drinks = clue[:drinks]
+        houses << house
+        
+        # erase all recorded properties in the clue except hosue color and neighbor information
+        clue.each do |key, val|
+          if [:nationality, :pets, :drinks, :cigarettes].include?(key)
+            clue[key] = nil
+          end
         end
       end
     end
-    puts "RESULT >>>>>>>>>>"
-    puts result
     
-    result
+    
+    # result = []
+ #    @clues.each do |clue|
+ #      temp_clues = @clues - [clue]
+ #      clue.each do |key, value|
+ #        temp_clues.each do |temp_clue|
+ #          # merge two clues
+ #          result << clue.merge(temp_clue) if temp_clue[key] == value
+ #        end
+ #      end
+ #    end
+ #    puts "RESULT >>>>>>>>>>"
+ #    puts result
+ #    
+ #    result
   end
     
 end
 
 # functions declared outside the class
 # move them later into a module
+def reverse_role(hash)
+  result = {}
+  hash.each do |key, val|
+    new_key = "neighbor_" + key.to_s
+    result[new_key] = val
+  end
+  
+  result
+end
+
+def complex_parse(str)
+  result = {}
+  
+  subject = str.split("is").first
+  puts subject.capitalize
+  words_subj = subject.split(" ")
+  words_subj.each_with_index do |word, idx|
+    color = words_subj[idx - 1]
+    result[:house_color] = color #if Game::COLORS.include?(color)
+  end
+  
+  object = str.split("is").last
+  words_obj = object.chomp(".").split(" ")
+  words_obj.each_with_index do |word, idx|
+    color = words_obj[idx - 1]
+    result[:neighbor_house_color] = color if Game::COLORS.include?(color)
+    result[:position_to_neighbor] = word if Game::POSITION.include?(word)
+  end
+  # puts ".........................."
+  # puts result
+  
+  result
+end
+
 def find_pets(str)
   result = {}
   words = str.chomp(".").split(" ")
@@ -139,7 +218,7 @@ def find_house(str)
   result = {}
   words = str.chomp(".").split(" ")
   words.each_with_index do |word, idx|
-    if word == "house"
+    if word == "house" || word == "house's"
       house_prop = words[idx - 1]
       if Game::COLORS.include?(house_prop)
         result[:house_color] = house_prop
